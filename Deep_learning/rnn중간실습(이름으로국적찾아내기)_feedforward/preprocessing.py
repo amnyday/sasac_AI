@@ -1,5 +1,5 @@
 #[1] 피드포워드(MLP) 사용해서 이름의 국적을 추론하는 뉴럴넷 만들기
-#1. 데이터셋만들기, 데이터전처리
+#1. 데이터셋만들기( 데이터 준비)
 import os
 import glob
 import torch
@@ -93,18 +93,27 @@ for names_list in category_names.values():
 '''
 max_length = max(len(name) for names_list in category_names.values() for name in names_list)
 
-##이름과 국가명 데이터를 딥러닝 하기위해 숫자텐서로 바꾼다.
-#이름을 텐서로 변환하는 함수 정의
-# def name_to_tensor(name):
-#     #패딩으로 최대글자수 길이만큼의 텐서만들기 
-#     padding_tensor = torch.zeros(max_length, dtype=torch.long)
-#     # 이름의 각 문자를 텐서에 넣기
-#     for i, letter in enumerate(name):
-#         padding_tensor[i] = ord(letter)  # 문자 유니코드 값 할당
-#     print(padding_tensor)
-#     # 결과 출력
-#     return padding_tensor
+#2. 데이터 전처리(데이터셋 만들기, 데이터 ->텐서변환)
+###이름과 국가명 데이터를 딥러닝 하기위해 숫자텐서로 바꾼다.
 
+'''
+##이름을 텐서로 변환하는 함수 정의1)유니코드 값 그대로 사용
+def name_to_tensor(name):
+    #패딩으로 최대글자수 길이만큼의 텐서만들기 
+    padding_tensor = torch.zeros(max_length, dtype=torch.long)
+    # 이름의 각 문자를 텐서에 넣기
+    for i, letter in enumerate(name):
+        padding_tensor[i] = ord(letter)  # 문자 유니코드 값 할당
+    # 결과 출력
+    return padding_tensor
+'''
+
+##이름을 텐서로 변환하는 함수 정의1)알파벳 인덱스 0~26 으로 변환해서 사용 
+##(0부터 인덱스로 보통변환해서 쓰는데, 그이유는, 나중에 torch함수 사용할때 0부터 하도록 되있는게편해서 그렇다.)
+
+# 문자 인덱스 매핑 사전 만들기
+letter_to_index = {letter: i for i, letter in enumerate(all_letters)}
+index_to_letter = {i: letter for i, letter in enumerate(all_letters)}
 
 def name_to_tensor(name):
     # 패딩으로 최대글자수 길이만큼의 텐서 만들기 
@@ -115,16 +124,18 @@ def name_to_tensor(name):
             padding_tensor[i] = letter_to_index[letter]  # 인덱스 값 할당
     return padding_tensor
 
-
 # 임베딩 크기 정의
 embedding_dim = 10  # 임베딩 차원 (나중에 변화시켜보기,하이퍼파라미터로)
+#(임베딩은 차원을 축소시키는데만 쓴다. 늘리는건 거의없다고본다.  10으로줄이면잘될텐데,100으로늘리면잘안될거다.
+#결과가 잘안나오는걸볼수있을거다. 
+#임베딩으로 차원축소하면서도 파라미터들이 학습되면서 정보를 얻는다.)
+
 # 임베딩 레이어 정의
 embedding = nn.Embedding(num_embeddings = num_letters, embedding_dim = embedding_dim)
 # 임베딩 레이어 생성
 #embedding = nn.Embedding(num_embeddings=max_length, embedding_dim=embedding_dim, padding_idx=0)
 # 임베딩 레이어 생성 (올바른 방식)
 #embedding = nn.Embedding(num_embeddings=num_letters, embedding_dim=embedding_dim)
-
 
 # 임베딩을 수행하는 함수
 def name_to_embedding(name):
@@ -133,7 +144,6 @@ def name_to_embedding(name):
     # 임베딩 수행
     embedded_tensor = embedding(name_tensor)
     return embedded_tensor
-
 
 # 예시 이름
 name = "alice"
